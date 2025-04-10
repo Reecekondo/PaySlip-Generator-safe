@@ -1,4 +1,4 @@
-🧾 Payslip Generator Project
+**🧾 Payslip Generator Project**
 
 This project is a complete Python-based tool that:
 
@@ -10,7 +10,7 @@ Generates payslips as PDF files using ReportLab
 
 Emails those payslips to each employee using Gmail SMTP
 
-🚀 How to Use
+*🚀 How to Use*
 
 1. Install Requirements
 
@@ -58,7 +58,7 @@ Payslips will be saved in the payslips/ folder
 
 Emails will be sent to employees with the PDF attached
 
-🛠 Technologies Used
+*🛠 Technologies Used*
 
 Python 3.x
 
@@ -70,7 +70,7 @@ smtplib / yagmail – for sending emails
 
 openpyxl – for reading .xlsx files with pandas
 
-📁 Project Structure
+*📁 Project Structure*
 
 Payslip Generator/
 ├── employees.xlsx
