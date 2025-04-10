@@ -182,76 +182,87 @@ print("All payslips generated successfully!")
 
 
 
-
-
-
 # Sending emails with payslips to my employees
+# Step 4: Send Payslips via Email
+
 
 import smtplib
 import os
 import pandas as pd
+import logging
 from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
 from email.mime.base import MIMEBase
 from email import encoders
 
+# Setup logging
+logging.basicConfig(filename="logs/email_errors.log", level=logging.ERROR)
+
 # Email Configuration
-SMTP_SERVER = "smtp.gmail.com"  # Use your email provider's SMTP server
-SMTP_PORT = 587
-SENDER_EMAIL = "reecekhalid96@gmail.com"
-PASSWORD = "bnamsdoikuzsizgt"  # Use an app password, NOT your regular password!
+SMTP_SERVER = os.getenv("SMTP_SERVER", "smtp.example.com")
+SMTP_PORT = int(os.getenv("SMTP_PORT", 587))
+SENDER_EMAIL = os.getenv("SENDER_EMAIL", "your_email@example.com")
+PASSWORD = os.getenv("EMAIL_PASSWORD")
 
 # Load employee data
-file_path = "Wolf-Fuels.xlsx"
-df = pd.read_excel(file_path)
-df.columns = df.columns.str.strip()  # Clean column names
-
+file_path = "data/Wolf-Fuels.xlsx"
+try:
+    df = pd.read_excel(file_path)
+    df.columns = df.columns.str.strip()
+except Exception as e:
+    logging.error(f"Error loading employee data: {str(e)}")
+    print(f"ERROR: Could not load employee data! {str(e)}")
+    exit()
+except Exception as e:
+    logging.error(f"Error loading employee data from {file_path}: {str(e)}")
+    
 # Function to send payslip email
 def send_payslip(employee):
-    employee_email = employee["Email"]
-    employee_id = str(employee["Employee-ID"])
-    payslip_file = f"payslips/payslip_{employee_id}.pdf"
-
-    if not os.path.exists(payslip_file):
-        print(f"Payslip not found for {employee['Names']}, skipping...")
-        return
-    
-    msg = MIMEMultipart()
-    msg["From"] = SENDER_EMAIL
-    msg["To"] = employee_email
-    msg["Subject"] = "Your Payslip for This Month"
-
-    # Email body
-    msg.attach(MIMEBase("text", "plain"))
-    msg.get_payload()[0].set_payload("Dear Employee,\n\nPlease find your payslip for this month attached.\n\nBest regards,\nFinance Team")
-
-    # Attach the payslip PDF
-    with open(payslip_file, "rb") as attachment:
-        part = MIMEBase("application", "octet-stream")
-        part.set_payload(attachment.read())
-        encoders.encode_base64(part)
-        part.add_header("Content-Disposition", f'attachment; filename="{employee_id}.pdf"')
-        msg.attach(part)
-
-    # Send Email
     try:
+        employee_email = str(employee["Email"]).strip()
+        employee_id = str(employee["Employee_ID"]).strip()
+        payslip_file = f"payslips/payslip_{employee_id}.pdf"
+
+        if not os.path.exists(payslip_file):
+            error_msg = f"ERROR: Payslip file missing for {employee['Names']}, skipping..."
+            logging.error(error_msg)
+            print(error_msg)
+            return
+
+        msg = MIMEMultipart()
+        msg["From"] = SENDER_EMAIL
+        msg["To"] = employee_email
+        msg["Subject"] = "Your Payslip for This Month"
+
+        body = f"Dear {employee['Names']},\n\nPlease find your payslip attached.\n\nBest regards,\nFinance Team"
+        msg.attach(MIMEText(body, "plain"))
+
+        # Attach the payslip PDF
+        with open(payslip_file, "rb") as attachment:
+            part = MIMEBase("application", "octet-stream")
+            part.set_payload(attachment.read())
+            encoders.encode_base64(part)
+            part.add_header("Content-Disposition", f'attachment; filename="payslip_{employee_id}.pdf"')
+            msg.attach(part)
+
+        # Send Email
         server = smtplib.SMTP(SMTP_SERVER, SMTP_PORT)
         server.starttls()
         server.login(SENDER_EMAIL, PASSWORD)
         server.sendmail(SENDER_EMAIL, employee_email, msg.as_string())
         server.quit()
         print(f"Payslip sent to {employee_email}")
+    except smtplib.SMTPException as e:
+        logging.error(f"SMTP Error for {employee_email}: {str(e)}")
+        print(f"ERROR: Could not send payslip to {employee_email}.")
     except Exception as e:
-        print(f"Error sending to {employee_email}: {e}")
+        logging.error(f"Unexpected error for {employee_email}: {str(e)}")
+        print(f"ERROR: Unknown issue sending payslip to {employee_email}.")
 
 # Send payslip emails
-for _, employee in df.iterrows():
-    send_payslip(employee)
+df.apply(send_payslip, axis=1)
 
-
-
-
-
-
+print("Payslips emailed successfully!")
 
 
 
